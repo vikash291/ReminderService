@@ -1,30 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.reminderservice.MainActivity">
+    android:background="@color/design_default_color_primary"
+    tools:context=".MainActivity">
 
-    <android.support.design.widget.AppBarLayout
+    <ImageView
+        android:id="@+id/image"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <TextView
+        android:id="@+id/text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay">
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/margin_top_no_notes"
+        android:fontFamily="sans-serif-light"
+        android:text="Login"
+        android:textColor="@android:color/white"
+        android:layout_below="@id/image"
+        android:gravity="center"/>
 
-    </android.support.design.widget.AppBarLayout>
-
-    <include layout="@layout/content_main" />
-
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/showClock"
+    <ProgressBar
+        android:id="@+id/progress_circular"
+        android:visibility="invisible"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:tint="@android:color/background_light"
-        app:backgroundTint="@color/colorPrimaryDark"
+        android:layout_below="@id/text"
+        android:layout_marginTop="20dp"
+        android:layout_centerHorizontal="true"/>
+
+    <Button
+        android:id="@+id/login"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:layout_marginBottom="20dp"
-        android:layout_marginRight="20dp"
-        app:srcCompat="@android:drawable/ic_input_add" />
-</android.support.design.widget.CoordinatorLayout>
+        android:layout_marginBottom="60dp"
+        android:layout_marginLeft="26dp"
+        android:layout_marginRight="26dp"
+        android:text="Login With Google"
+        />
+</RelativeLayout>

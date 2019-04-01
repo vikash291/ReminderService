@@ -15,7 +15,7 @@ import java.util.Date;
 import java.util.List;
 
 import static com.example.reminderservice.AddAlarmActivity.timeStampFormat;
-import static com.example.reminderservice.MainActivity.timeStampToDate;
+import static com.example.reminderservice.ViewReminderActivity.timeStampToDate;
 
 public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.MyViewHolder> {
 

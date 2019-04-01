@@ -1,158 +1,165 @@
 package com.example.reminderservice;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.CoordinatorLayout;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v7.app.AlertDialog;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
-import android.widget.ListView;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.example.reminderservice.model.ReminderDB;
-import com.example.reminderservice.util.MyDividerItemDecoration;
-import com.example.reminderservice.util.RecyclerTouchListener;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
+import com.squareup.picasso.Picasso;
 
 public class MainActivity extends AppCompatActivity {
 
-    ListView reminderList;
-    private ReminderAdapter mAdapter;
-    DatabaseHelper myDB;
-    ArrayList<String> reminderArrList ;
-    private List<ReminderDB> notesList = new ArrayList<>();
-    FloatingActionButton showClock;
-    private RecyclerView recyclerView;
-    private CoordinatorLayout coordinatorLayout;
-    private TextView noNotesView;
-
+    static final int GOOGLE_SIGN_IN = 123;
+    static final int USER_LOGOUT = 1511;
+    FirebaseAuth mAuth;
+    Button btn_login, btn_logout;
+    TextView text;
+    ImageView image;
+    ProgressBar progressBar;
+    GoogleSignInClient mGoogleSignInClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        showClock =  findViewById(R.id.showClock);
-        //set onclick listener.
-//        reminderList = (ListView) findViewById(R.id.reminderList);
-        myDB = new DatabaseHelper(this);
-        /* Old Code
 
+        btn_login = findViewById(R.id.login);
+//        btn_logout = findViewById(R.id.logout);
+        text = findViewById(R.id.text);
+        image = findViewById(R.id.image);
+        progressBar = findViewById(R.id.progress_circular);
+        Intent viewIntent = new Intent(MainActivity.this,ViewReminderActivity.class);
+        startActivity(viewIntent);
 
-        reminderArrList = new ArrayList<>();
-        Cursor data = myDB.getListContents();
-        if(data.getCount() == 0){
-            Toast.makeText(getApplicationContext(),"No Record Found !!",Toast.LENGTH_SHORT).show();
-        }else{
-            while(data.moveToNext()){
-                reminderArrList.add(data.getString(1)+"\n"+timeStampToDate(Long.parseLong(data.getString(2))));
-//                reminderArrList.add();
-                ListAdapter reminderListAdapter = new ArrayAdapter<>(this,android.R.layout.simple_list_item_1,reminderArrList);
-                reminderList.setAdapter(reminderListAdapter);
+        Bundle extras = getIntent().getExtras();
+        if (extras != null)
+        {
+            String method = extras.getString("methodName");
+
+            if (method.equals("Logout"))
+            {
+                Logout();
             }
-        }  */
+        }
+        mAuth = FirebaseAuth.getInstance();
 
-        //new code
-        noNotesView = findViewById(R.id.empty_notes_view);
-        notesList.addAll(myDB.getAllNotes());
-        showClock.setOnClickListener(new View.OnClickListener() {
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id))
+                .requestEmail()
+                .build();
+
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
+        btn_login.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                openAlarm();
+                MainActivity.this.SignInGoogle();
             }
         });
-        recyclerView = findViewById(R.id.recycler_view);
 
-        mAdapter = new ReminderAdapter(this, notesList);
-        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(this);
-        recyclerView.setLayoutManager(mLayoutManager);
-        recyclerView.setItemAnimator(new DefaultItemAnimator());
-        recyclerView.addItemDecoration(new MyDividerItemDecoration(this, LinearLayoutManager.VERTICAL, 16));
-        recyclerView.setAdapter(mAdapter);
+//        btn_logout.setOnClickListener(v -> Logout());
 
-        toggleEmptyNotes();
-
-        recyclerView.addOnItemTouchListener(new RecyclerTouchListener(this,
-                recyclerView, new RecyclerTouchListener.ClickListener() {
-            @Override
-            public void onClick(View view, final int position) {
-            }
-
-            @Override
-            public void onLongClick(View view, int position) {
-                showActionsDialog(position);
-            }
-        }));
-
-    }
-
-    /**
-     * Deleting note from SQLite and removing the
-     * item from the list by its position
-     */
-    private void deleteNote(int position) {
-        // deleting the note from db
-        myDB.deleteNote(notesList.get(position));
-
-        // removing the note from the list
-        notesList.remove(position);
-        mAdapter.notifyItemRemoved(position);
-
-        toggleEmptyNotes();
-    }
-
-    /**
-     * Opens dialog with Edit - Delete options
-     * Edit - 0
-     * Delete - 0
-     */
-    private void showActionsDialog(final int position) {
-        CharSequence colors[] = new CharSequence[]{"Edit", "Delete"};
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Choose option");
-        builder.setItems(colors, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                if (which == 0) {
-//                    showNoteDialog(true, notesList.get(position), position);
-                    openAlarm();
-                } else {
-                    deleteNote(position);
-                }
-            }
-        });
-        builder.show();
-    }
-
-    /**
-     * Toggling list and empty notes view
-     */
-    private void toggleEmptyNotes() {
-        // you can check notesList.size() > 0
-
-        if (myDB.getNotesCount() > 0) {
-            noNotesView.setVisibility(View.GONE);
-        } else {
-            noNotesView.setVisibility(View.VISIBLE);
+        if (mAuth.getCurrentUser() != null) {
+            FirebaseUser user = mAuth.getCurrentUser();
+            updateUI(user);
         }
     }
 
-    public void openAlarm(){
-        Intent intent = new Intent(this, AddAlarmActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-        startActivity(intent);
+    public void SignInGoogle() {
+        progressBar.setVisibility(View.VISIBLE);
+        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, GOOGLE_SIGN_IN);
     }
 
-    public static String timeStampToDate(long timeStamp){
-        String date = new java.text.SimpleDateFormat("dd-MM-yyyy hh:mm a").format(new java.util.Date (timeStamp * 1000));
-        return date;
+    private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
+        Log.d("TAG", "firebaseAuthWithGoogle:" + acct.getId());
+
+        AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
+        mAuth.signInWithCredential(credential)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            progressBar.setVisibility(View.INVISIBLE);
+
+                            Log.d("TAG", "signInWithCredential:success");
+
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            MainActivity.this.updateUI(user);
+                        } else {
+                            progressBar.setVisibility(View.INVISIBLE);
+
+                            Log.w("TAG", "signInWithCredential:failure", task.getException());
+
+                            Toast.makeText(MainActivity.this, "Authentication failed.",
+                                    Toast.LENGTH_SHORT).show();
+                            MainActivity.this.updateUI(null);
+                        }
+                    }
+                });
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.i("TAG", "qwerrqwerqwerwqerqwerwqerwerwqer");
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == GOOGLE_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                if (account != null) firebaseAuthWithGoogle(account);
+            } catch (ApiException e) {
+                Log.w("TAG", "Google sign in failed", e);
+            }
+        }
+        if(requestCode == USER_LOGOUT){
+            Logout();
+        }
+    }
+
+    private void updateUI(FirebaseUser user) {
+        if (user != null) {
+            String name = user.getDisplayName();
+            String email = user.getEmail();
+
+            Intent viewIntent = new Intent(MainActivity.this,ViewReminderActivity.class);
+            startActivity(viewIntent);
+            finish();
+        }
+    }
+
+
+    public void Logout() {
+        Log.i("TAG", "logged otutttttttttasdfadfas");
+        FirebaseAuth.getInstance().signOut();
+        mGoogleSignInClient.signOut().addOnCompleteListener(this,
+                new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        Toast.makeText(getApplicationContext(),"Logged out",Toast.LENGTH_SHORT).show();
+                    }
+                });
+        updateUI(null);
+    }
 }
+
