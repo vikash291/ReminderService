@@ -1,14 +1,19 @@
 package com.example.reminderservice;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.DatePickerDialog;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.telephony.SmsManager;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -19,33 +24,52 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
+import com.example.reminderservice.model.ReminderDB;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import static android.content.ContentValues.TAG;
 
 public class AddAlarmActivity extends AppCompatActivity {
     private int notificationId = 1;
+    private static final int MY_PERMISSIONS_REQUEST_SEND_SMS =0 ;
+    private boolean updateReminder = false;
+    private List<ReminderDB> reminderList = new ArrayList<>();
+    String oldDate = "",date,curTime,oldTime = "",oldText="",message;
     DatabaseHelper myDB = new DatabaseHelper(this);
     LinearLayout btnDatePicker, btnTimePicker;
-    EditText editText;
-    //    Button  cancelBtn ;
+    EditText editText,phoneNoText;
     FloatingActionButton setBtn;
     TextView txtDate, txtTime;
-    private int mYear, mMonth, mDay, mHour, mMinute;
-    long epoch;
+    String phoneNo,mMessage="";
+    private int mYear, mMonth, mDay, mHour, mMinute,reminderPositon;
+    long selectedTimeStamp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_alarm);
 
-        String date = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
-        String curTime = new SimpleDateFormat("hh:mm a").format(Calendar.getInstance().getTime());
-        Log.i(TAG, curTime);
+        oldDate = getIntent().getStringExtra("oldDate");
+        oldTime = getIntent().getStringExtra("oldTime");
+        oldText = getIntent().getStringExtra("oldText");
+        reminderPositon = (int) getIntent().getIntExtra("position",0);
+
+        if(oldDate != null && oldTime != null && oldText != null ){
+            date = oldDate;
+            curTime = oldTime;
+            updateReminder = true;
+        }else {
+            date = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
+            curTime = new SimpleDateFormat("hh:mm a").format(Calendar.getInstance().getTime());
+            Log.i(TAG, curTime);
+        }
 
         //get current date time
         final Calendar c = Calendar.getInstance();
@@ -57,11 +81,11 @@ public class AddAlarmActivity extends AppCompatActivity {
 
 
         setBtn = (FloatingActionButton) findViewById(R.id.setBtn);
-//        cancelBtn = (Button)findViewById(R.id.cancelBtn) ;
-
         btnDatePicker = (LinearLayout) findViewById(R.id.dateLinear);
         btnTimePicker = (LinearLayout) findViewById(R.id.timeLinear);
         editText = findViewById(R.id.editTask);
+        phoneNoText = findViewById(R.id.editTask);
+        editText.setText(oldText);
         txtDate = (TextView) findViewById(R.id.in_date);
         txtDate.setText(date);
         txtTime = (TextView) findViewById(R.id.in_time);
@@ -123,62 +147,74 @@ public class AddAlarmActivity extends AppCompatActivity {
             }
         });
 
-        //set Cancel onclick listener.
-//        cancelBtn.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                Intent cancelIntent= new Intent(AddAlarmActivity.this, MainActivity.class);
-//                startActivity(cancelIntent);
-//            }
-//        });
-
         //set add onclick listener
         setBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                String message = editText.getText().toString();
-                String date = dateFormat(txtDate.getText().toString());
-//                String date = txtDate.getText().toString();
-                String time = timeFormat(txtTime.getText().toString());
+                message = editText.getText().toString();
+                String inputdate = dateFormat(txtDate.getText().toString());
+                String inputTime = timeFormat(txtTime.getText().toString());
+                phoneNo = phoneNoText.getText().toString();
 
-                if (message.length() != 0 && time.length() != 0) {
+                if (message.length() != 0 && inputTime.length() != 0) {
 
-                    String timeStamp = date + " " + time;
-                    epoch = timeStampFormat(timeStamp);
-                    Log.i(TAG, epoch + "(  " + timeStamp);
-                    AddData(message, Long.toString(epoch));
-                    editText.setText("");
+                    String timeStamp = inputdate + " " + inputTime;
+                    selectedTimeStamp = timeStampFormat(timeStamp);
+                    long currentTimeStamp = System.currentTimeMillis()/1000;
+
+                    if(selectedTimeStamp < currentTimeStamp){
+                        Toast.makeText(getApplicationContext(), "Incorrect Date Time Selected ", Toast.LENGTH_SHORT).show();
+                    }else {
+                        if (updateReminder) {
+                            updateReminder(message, Long.toString(selectedTimeStamp), reminderPositon);
+                            setAlarmNotification();
+                        } else {
+                            AddData(message, Long.toString(selectedTimeStamp));
+                            setAlarmNotification();
+                        }
+                        if (phoneNo.length() != 0) {
+                            phoneNo = "0"+phoneNo;
+                            mMessage = "You have a reminder on " + inputdate + " at " + inputTime + " with a text message '" + message + "'";
+                            sendSMSMessage();
+                        }
+                        editText.setText("");
+                    }
+
                 } else {
                     Toast.makeText(getApplicationContext(), "No Date Time Added !! ", Toast.LENGTH_SHORT).show();
                 }
 
-                //set notification & text
-                Intent alarmReceiverIntent = new Intent(AddAlarmActivity.this, AlarmReceiver.class);
-                alarmReceiverIntent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                alarmReceiverIntent.putExtra("notificationId", notificationId);
-                alarmReceiverIntent.putExtra("todo", message);
-                final int _id = (int) System.currentTimeMillis();
-
-                PendingIntent alarmIntent = PendingIntent.getBroadcast(AddAlarmActivity.this, _id, alarmReceiverIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-
-                AlarmManager alarm = (AlarmManager) getSystemService(ALARM_SERVICE);
-
-
-                //create time
-                Calendar startTime = Calendar.getInstance();
-                Log.i(TAG, mYear + "----" + mMonth + "---" + mDay + "----" + mHour + "---" + mMinute);
-                startTime.set(mYear,mMonth,mDay,mHour,mMinute,0);
-                long alarmStartTime = startTime.getTimeInMillis();
-
-                //set alarm.
-                alarm.set(AlarmManager.RTC_WAKEUP, alarmStartTime, alarmIntent);
-                Toast.makeText(getApplicationContext(), "Done!", Toast.LENGTH_SHORT).show();
-                Intent viewIntent = new Intent(AddAlarmActivity.this, MainActivity.class);
-                viewIntent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                startActivity(viewIntent);
             }
         });
+
+    }
+
+    private void setAlarmNotification(){
+
+        //set notification & text
+        Intent alarmReceiverIntent = new Intent(AddAlarmActivity.this, AlarmReceiver.class);
+        alarmReceiverIntent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+        alarmReceiverIntent.putExtra("notificationId", notificationId);
+        alarmReceiverIntent.putExtra("todo", message);
+        final int _id = (int) System.currentTimeMillis();
+
+        PendingIntent alarmIntent = PendingIntent.getBroadcast(AddAlarmActivity.this, _id, alarmReceiverIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        AlarmManager alarm = (AlarmManager) getSystemService(ALARM_SERVICE);
+
+        //create time
+        Calendar startTime = Calendar.getInstance();
+//                Log.i(TAG, mYear + "----" + mMonth + "---" + mDay + "----" + mHour + "---" + mMinute);
+        startTime.set(mYear,mMonth,mDay,mHour,mMinute,00);
+        long alarmStartTime = startTime.getTimeInMillis();
+
+        //set alarm.
+        alarm.setExact(AlarmManager.RTC_WAKEUP, alarmStartTime, alarmIntent);
+        Toast.makeText(getApplicationContext(), "Done!", Toast.LENGTH_SHORT).show();
+        Intent viewIntent = new Intent(AddAlarmActivity.this, MainActivity.class);
+        viewIntent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+        startActivity(viewIntent);
 
     }
 
@@ -225,6 +261,58 @@ public class AddAlarmActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return newTimeStamp;
+    }
+
+
+    /**
+     * Updating note in db and updating
+     * item in the list by its position
+     */
+    private void updateReminder(String msg,String timeStamp, int position) {
+        reminderList.addAll(myDB.getAllNotes());
+        ReminderDB n = reminderList.get(position);
+        // updating note text
+        n.setReminderMsg(msg);
+        n.setTimestamp(timeStamp);
+
+        // updating note in db
+        myDB.updateNote(n);
+
+        // refreshing the list
+        reminderList.set(position, n);
+    }
+
+    protected void sendSMSMessage() {
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.SEND_SMS)) {
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.SEND_SMS},
+                        MY_PERMISSIONS_REQUEST_SEND_SMS);
+            }
+        }
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode,String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_SEND_SMS: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    SmsManager smsManager = SmsManager.getDefault();
+                    smsManager.sendTextMessage(phoneNo, null, mMessage, null, null);
+                    Toast.makeText(getApplicationContext(), "SMS sent.",
+                            Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(getApplicationContext(),
+                            "SMS faild, please try again.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+            }
+        }
+
     }
 
 }

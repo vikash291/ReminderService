@@ -20,6 +20,7 @@ import android.widget.TextView;
 import com.example.reminderservice.model.ReminderDB;
 import com.example.reminderservice.util.MyDividerItemDecoration;
 import com.example.reminderservice.util.RecyclerTouchListener;
+import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -127,8 +128,7 @@ public class ViewReminderActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 if (which == 0) {
-//                    showNoteDialog(true, notesList.get(position), position);
-                    openAlarm();
+                    editAlarm(notesList.get(position),position);
                 } else {
                     deleteNote(position);
                 }
@@ -156,10 +156,26 @@ public class ViewReminderActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    public static String timeStampToDate(long timeStamp){
-        String date = new java.text.SimpleDateFormat("dd-MM-yyyy hh:mm a").format(new java.util.Date (timeStamp * 1000));
+    public static String timeStampToDate(long timeStamp,int onlyOne){
+        String date = "" ;
+        if(onlyOne == 0){
+            date = new java.text.SimpleDateFormat("dd-MM-yyyy hh:mm a").format(new java.util.Date (timeStamp * 1000));
+        }else if(onlyOne == 1){
+            date = new java.text.SimpleDateFormat("dd-MM-yyyy").format(new java.util.Date (timeStamp * 1000));
+        }else if(onlyOne == 2){
+            date = new java.text.SimpleDateFormat("hh:mm a").format(new java.util.Date (timeStamp * 1000));
+        }
         return date;
+    }
 
+    public void editAlarm(ReminderDB remList, int position){
+        Intent intent = new Intent(this, AddAlarmActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+        intent.putExtra("oldDate",timeStampToDate( Long.parseLong(remList.getTimestamp()) ,1));
+        intent.putExtra("oldTime",timeStampToDate( Long.parseLong(remList.getTimestamp()) ,2));
+        intent.putExtra("oldText",remList.getReminderMsg());
+        intent.putExtra("position", position);
+        startActivity(intent);
     }
 
     @Override
@@ -174,8 +190,8 @@ public class ViewReminderActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         if (id == R.id.logout) {
+            FirebaseAuth.getInstance().signOut();
             Intent logoutIntent = new Intent(ViewReminderActivity.this, MainActivity.class);
-            logoutIntent.putExtra("methodName","Logout");
             startActivity(logoutIntent);
             finish();
         }

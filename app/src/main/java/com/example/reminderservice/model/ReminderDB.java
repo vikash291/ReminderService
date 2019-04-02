@@ -33,11 +33,11 @@ public class ReminderDB {
         return id;
     }
 
-    public String getNote() {
+    public String getReminderMsg() {
         return note;
     }
 
-    public void setNote(String note) {
+    public void setReminderMsg(String note) {
         this.note = note;
     }
 

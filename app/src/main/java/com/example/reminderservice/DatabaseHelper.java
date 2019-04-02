@@ -1,7 +1,5 @@
 package com.example.reminderservice;
 
-//package applications.editablelistview;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -72,7 +70,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             do {
                 ReminderDB reminderNote = new ReminderDB();
                 reminderNote.setId(cursor.getInt(cursor.getColumnIndex(ReminderDB.COLUMN_ID)));
-                reminderNote.setNote(cursor.getString(cursor.getColumnIndex(ReminderDB.COLUMN_NOTE)));
+                reminderNote.setReminderMsg(cursor.getString(cursor.getColumnIndex(ReminderDB.COLUMN_NOTE)));
                 reminderNote.setTimestamp(cursor.getString(cursor.getColumnIndex(ReminderDB.COLUMN_TIMESTAMP)));
                 notes.add(reminderNote);
             } while (cursor.moveToNext());
@@ -102,7 +100,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues values = new ContentValues();
-        values.put(ReminderDB.COLUMN_NOTE, reminder.getNote());
+        values.put(ReminderDB.COLUMN_NOTE, reminder.getReminderMsg());
+        values.put(ReminderDB.COLUMN_TIMESTAMP,reminder.getTimestamp());
 
         // updating row
         return db.update(ReminderDB.TABLE_NAME, values, ReminderDB.COLUMN_ID + " = ?",

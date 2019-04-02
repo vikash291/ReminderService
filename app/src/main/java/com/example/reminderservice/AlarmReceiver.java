@@ -39,20 +39,13 @@ public class AlarmReceiver extends BroadcastReceiver {
         intent = new Intent(context, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         contentIntent = PendingIntent.getActivity(context, 0, intent, 0);
-        builder.setContentTitle("Its' Time")                            // required
-                .setSmallIcon(android.R.drawable.ic_popup_reminder)   // required
+        builder.setContentTitle("It's Time")                            // required
+                .setSmallIcon(android.R.drawable.ic_dialog_info)   // required
                 .setContentText(message) // required
-                .setDefaults(Notification.DEFAULT_ALL)
                 .setAutoCancel(true)
+                .setDefaults(Notification.DEFAULT_ALL)
                 .setContentIntent(contentIntent)
                 .setTicker("Its' Time");
-//        builder.setSmallIcon(android.R.drawable.ic_dialog_info)
-//                .setContentTitle("Its' Time")
-//                .setContentText(message)
-//                .setWhen(System.currentTimeMillis())
-//                .setAutoCancel(true)
-//                .setContentIntent(contentIntent);
-
 
         // Notify
         myNotificationManager.notify(notificationId, builder.build());

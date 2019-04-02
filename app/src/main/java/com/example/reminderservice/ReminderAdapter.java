@@ -1,5 +1,6 @@
 package com.example.reminderservice;
 import android.content.Context;
+import android.graphics.Color;
 import android.support.v7.widget.RecyclerView;
 import android.text.Html;
 import android.view.LayoutInflater;
@@ -14,7 +15,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
-import static com.example.reminderservice.AddAlarmActivity.timeStampFormat;
 import static com.example.reminderservice.ViewReminderActivity.timeStampToDate;
 
 public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.MyViewHolder> {
@@ -52,14 +52,21 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.MyView
     @Override
     public void onBindViewHolder(MyViewHolder holder, int position) {
         ReminderDB note = notesList.get(position);
+        long msgTimeStamp = Long.parseLong(note.getTimestamp());
+        long currentTimeStamp = System.currentTimeMillis()/1000;
 
-        holder.note.setText(note.getNote());
+        if(msgTimeStamp < currentTimeStamp) {
+            holder.dot.setTextColor(Color.parseColor("#FF4500"));
+            holder.note.setTextColor(Color.parseColor("#FF4500"));
+            holder.timestamp.setTextColor(Color.parseColor("#FF4500"));
+        }
+        holder.note.setText(note.getReminderMsg());
 
         // Displaying dot from HTML character code
-        holder.dot.setText(Html.fromHtml("&#8226;"));
+        holder.dot.setText(Html.fromHtml("&#8226;",Html.FROM_HTML_MODE_LEGACY));
 
         // Formatting and displaying timestamp
-        holder.timestamp.setText(formatDate(timeStampToDate(Long.parseLong(note.getTimestamp()))));
+        holder.timestamp.setText(formatDate(timeStampToDate(msgTimeStamp,0)));
     }
 
     @Override
@@ -76,7 +83,7 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.MyView
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("dd-MM-yyyy hh:mm a");
             Date date = fmt.parse(dateStr);
-            SimpleDateFormat fmtOut = new SimpleDateFormat("MMM d");
+            SimpleDateFormat fmtOut = new SimpleDateFormat("EEE, MMM d, yyyy 'at' hh:mm a");
             return fmtOut.format(date);
         } catch (ParseException e) {
 

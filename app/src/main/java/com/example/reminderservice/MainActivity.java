@@ -12,6 +12,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.reminderservice.model.ReminderDB;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -47,19 +48,8 @@ public class MainActivity extends AppCompatActivity {
         text = findViewById(R.id.text);
         image = findViewById(R.id.image);
         progressBar = findViewById(R.id.progress_circular);
-        Intent viewIntent = new Intent(MainActivity.this,ViewReminderActivity.class);
-        startActivity(viewIntent);
 
-        Bundle extras = getIntent().getExtras();
-        if (extras != null)
-        {
-            String method = extras.getString("methodName");
 
-            if (method.equals("Logout"))
-            {
-                Logout();
-            }
-        }
         mAuth = FirebaseAuth.getInstance();
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -79,8 +69,18 @@ public class MainActivity extends AppCompatActivity {
 //        btn_logout.setOnClickListener(v -> Logout());
 
         if (mAuth.getCurrentUser() != null) {
+            Log.i("TAG","user not logged out");
             FirebaseUser user = mAuth.getCurrentUser();
             updateUI(user);
+        }else{
+            Log.i("TAG","Logged out out out out out  logged out");
+            mGoogleSignInClient.signOut().addOnCompleteListener(this,
+                    new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            Toast.makeText(getApplicationContext(),"Logged out",Toast.LENGTH_SHORT).show();
+                        }
+                    });
         }
     }
 
@@ -132,9 +132,6 @@ public class MainActivity extends AppCompatActivity {
                 Log.w("TAG", "Google sign in failed", e);
             }
         }
-        if(requestCode == USER_LOGOUT){
-            Logout();
-        }
     }
 
     private void updateUI(FirebaseUser user) {
@@ -145,11 +142,12 @@ public class MainActivity extends AppCompatActivity {
             Intent viewIntent = new Intent(MainActivity.this,ViewReminderActivity.class);
             startActivity(viewIntent);
             finish();
+
         }
     }
 
-
-    public void Logout() {
+/*
+    public void Logout1() {
         Log.i("TAG", "logged otutttttttttasdfadfas");
         FirebaseAuth.getInstance().signOut();
         mGoogleSignInClient.signOut().addOnCompleteListener(this,
@@ -161,5 +159,6 @@ public class MainActivity extends AppCompatActivity {
                 });
         updateUI(null);
     }
+    */
 }
 
